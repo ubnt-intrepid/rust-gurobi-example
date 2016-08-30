@@ -3,30 +3,36 @@ extern crate ndarray;
 extern crate itertools;
 
 use std::env::args;
-use gurobi::{attr, param, Model, Var, LinExpr, Proxy, Binary, Env, Equal, Less};
-use ndarray::prelude::*;
-use itertools::*;
+pub use gurobi::{attr, param, Model, Var, LinExpr, Proxy, Binary, Env, Equal, Less, Status};
+pub use ndarray::prelude::*;
+pub use itertools::*;
 
-type Matrix<T> = Array<T, (usize, usize)>;
-type Result<T> = std::result::Result<T, self::Error>;
+pub type Matrix<T> = Array<T, (usize, usize)>;
+pub type Result<T> = std::result::Result<T, self::Error>;
 
 #[derive(Debug)]
-enum Error {
+pub enum Error {
   Gurobi(gurobi::Error),
   ShapeError(ndarray::ShapeError),
   Other(String),
 }
 
 impl From<gurobi::Error> for Error {
-  fn from(err: gurobi::Error) -> Error { Error::Gurobi(err) }
+  fn from(err: gurobi::Error) -> Error {
+    Error::Gurobi(err)
+  }
 }
 
 impl From<ndarray::ShapeError> for Error {
-  fn from(err: ndarray::ShapeError) -> Error { Error::ShapeError(err) }
+  fn from(err: ndarray::ShapeError) -> Error {
+    Error::ShapeError(err)
+  }
 }
 
 impl From<&'static str> for Error {
-  fn from(err: &'static str) -> Error { Error::Other(err.to_owned()) }
+  fn from(err: &'static str) -> Error {
+    Error::Other(err.to_owned())
+  }
 }
 
 
@@ -51,11 +57,11 @@ impl<T, E> IntoErr<T, E> for std::result::Result<T, E> {
 }
 
 
-fn make_matrix_variable(model: &mut Model,
-                        rows: usize,
-                        cols: usize,
-                        name: &str)
-                        -> Result<Matrix<Var>> {
+pub fn make_matrix_variable(model: &mut Model,
+                            rows: usize,
+                            cols: usize,
+                            name: &str)
+                            -> Result<Matrix<Var>> {
   let mut vars = Vec::with_capacity(rows * cols);
   for (r, c) in (0..rows).cartesian_product(0..cols) {
     let var = try!(model.add_var(&format!("{}_{{{},{}}}", name, r, c), Binary));
@@ -64,7 +70,7 @@ fn make_matrix_variable(model: &mut Model,
   Array::from_shape_vec((rows, cols), vars).into_err()
 }
 
-fn get_solution_matrix(model: &Model, rows: usize, cols: usize) -> Result<Matrix<f64>> {
+pub fn get_solution_matrix(model: &Model, rows: usize, cols: usize) -> Result<Matrix<f64>> {
   let mut sol = Vec::with_capacity(rows * cols);
   for v in model.get_vars() {
     let x = try!(v.get(&model, attr::X));
@@ -117,10 +123,8 @@ fn n_queen(env: &Env, n: usize) -> Result<Matrix<f64>> {
   try!(model.optimize());
 
   match try!(model.status()) {
-    gurobi::Status::Optimal => {
-      try!(model.write(&format!("{}_queen.sol", n)))
-    }
-    gurobi::Status::Infeasible => return Err("The model is infeasible.".into()),
+    Status::Optimal => try!(model.write(&format!("{}_queen.sol", n))),
+    Status::Infeasible => return Err("The model is infeasible.".into()),
     _ => return Err("Unknown error at optimization".into()),
   }
   get_solution_matrix(&model, n, n)
