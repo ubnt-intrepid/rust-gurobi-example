@@ -64,7 +64,7 @@ fn main() {
   }
 
   // Fix variables associated with pre-specified cells.
-  for ((i0, j0), val) in iproduct!((0..n), (0..n)).zip(data.into_iter()) {
+  for ((i0, j0), val) in iproduct!((0..n), (0..n)).zip(data) {
     match val { 
       v @ '1'...'9' => {
         let v = (v as usize) - 48 - 1; // 0-based
