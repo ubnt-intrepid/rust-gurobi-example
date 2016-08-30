@@ -8,7 +8,7 @@ type Matrix<T> = Array<T, (usize, usize)>;
 fn make_matrix_variable(model: &mut Model, rows: usize, cols: usize, name: &str) -> Result<Matrix<Var>, String> {
   let mut vars = Vec::with_capacity(rows * cols);
   for (r, c) in (0..rows).flat_map(|r| (0..cols).map(|c| (r, c)).collect::<Vec<_>>()) {
-    let var = try!(model.add_var(&format!("{}[{}][{}]", name, r, c), Binary).map_err(|e| format!("{:?}", e)));
+    let var = try!(model.add_var(&format!("{}_{{{},{}}}", name, r, c), Binary).map_err(|e| format!("{:?}", e)));
     vars.push(var);
   }
   let vars = try!(Array::from_shape_vec((rows, cols), vars).map_err(|e| e.to_string()));
@@ -31,36 +31,38 @@ fn n_queen(env: &Env, n: usize) -> Result<Array<f64, (usize, usize)>, String> {
   let x = try!(make_matrix_variable(&mut model, n, n, "x"));
   try!(model.update().map_err(|e| format!("{:?}", e)));
 
+  // c0: each row must have exactly `one` queen.
   for r in 0..n {
     let sb = x.subview(Axis(0), r);
     let lhs = sb.fold(LinExpr::new(), |expr, x| expr + x);
-    try!(model.add_constr(&format!("c0[{}]", r), lhs, Equal, 1.0).map_err(|e| format!("{:?}", e)));
+    try!(model.add_constr(&format!("c0_{}", r), lhs, Equal, 1.0).map_err(|e| format!("{:?}", e)));
   }
 
+  // c1: each column must have exactly `one` queen.
   for c in 0..n {
     let sb = x.subview(Axis(1), c);
     let lhs = sb.fold(LinExpr::new(), |expr, x| expr + x);
-    try!(model.add_constr(&format!("c1[{}]", c), lhs, Equal, 1.0).map_err(|e| format!("{:?}", e)));
+    try!(model.add_constr(&format!("c1_{}", c), lhs, Equal, 1.0).map_err(|e| format!("{:?}", e)));
   }
 
   // 左斜め
-  for rr in 0..n {
+  for rr in 0..(n-1) {
     let lhs = (rr..n).zip(0..(n - rr)).fold(LinExpr::new(), |expr, ix| expr + &x[ix]);
-    try!(model.add_constr(&format!("c2[{}]", rr), lhs, Less, 1.0).map_err(|e| format!("{:?}", e)));
+    try!(model.add_constr(&format!("c2_{}", rr), lhs, Less, 1.0).map_err(|e| format!("{:?}", e)));
   }
-  for cc in 1..n {
+  for cc in 1..(n-1) {
     let lhs = (0..(n - cc)).zip(cc..n).fold(LinExpr::new(), |expr, ix| expr + &x[ix]);
-    try!(model.add_constr(&format!("c3[{}]", cc), lhs, Less, 1.0).map_err(|e| format!("{:?}", e)));
+    try!(model.add_constr(&format!("c3_{}", cc), lhs, Less, 1.0).map_err(|e| format!("{:?}", e)));
   }
 
   // 右斜め
-  for rr in 0..n {
+  for rr in 1..n {
     let lhs = (0..rr + 1).rev().zip(0..rr + 1).fold(LinExpr::new(), |expr, ix| expr + &x[ix]);
-    try!(model.add_constr(&format!("c4[{}]", rr), lhs, Less, 1.0).map_err(|e| format!("{:?}", e)));
+    try!(model.add_constr(&format!("c4_{}", rr), lhs, Less, 1.0).map_err(|e| format!("{:?}", e)));
   }
-  for cc in 1..n {
+  for cc in 1..(n-1) {
     let lhs = (cc..n).rev().zip(cc..n).fold(LinExpr::new(), |expr, ix| expr + &x[ix]);
-    try!(model.add_constr(&format!("c5[{}]", cc), lhs, Less, 1.0).map_err(|e| format!("{:?}", e)));
+    try!(model.add_constr(&format!("c5_{}", cc), lhs, Less, 1.0).map_err(|e| format!("{:?}", e)));
   }
 
   try!(model.write(&format!("{}_queen.lp", n)).map_err(|e| format!("{:?}", e)));
