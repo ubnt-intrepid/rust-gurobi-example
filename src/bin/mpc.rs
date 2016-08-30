@@ -7,6 +7,28 @@ extern crate itertools;
 use gurobi::*;
 use itertools::*;
 
+struct MIPModel(gurobi::Model);
+
+impl std::ops::Deref for MIPModel {
+  type Target = gurobi::Model;
+  fn deref(&self) -> &gurobi::Model { &self.0 }
+}
+
+impl std::ops::DerefMut for MIPModel {
+  fn deref_mut(&mut self) -> &mut gurobi::Model { &mut self.0 }
+}
+
+impl MIPModel {
+  fn add_var_series(&mut self, name: &str, len: usize, start: isize) -> Result<Vec<Var>> {
+    let mut vars = Vec::with_capacity(len);
+    for i in start..((len as isize) - start) {
+      let v = try!(self.add_var(&format!("{}_{}", name, i), Continuous(-INFINITY, INFINITY)));
+      vars.push(v);
+    }
+    Ok(vars)
+  }
+}
+
 
 fn main() {
   let mut env = Env::new("receding_horizon.log").unwrap();
@@ -20,15 +42,6 @@ fn main() {
     x: Vec<f64>,
   }
 
-  fn add_var_series(model: &mut Model, name: &str, len: usize, start: isize) -> Result<Vec<Var>> {
-    let mut vars = Vec::with_capacity(len);
-    for i in start..((len as isize) - start) {
-      let v = try!(model.add_var(&format!("{}_{}", name, i), Continuous(-INFINITY, INFINITY)));
-      vars.push(v);
-    }
-    Ok(vars)
-  }
-
   let solve_mip = |x_t: f64, t: usize| -> Result<Solution> {
     // control horizon.
     let horizon = 10;
@@ -37,10 +50,10 @@ fn main() {
     let r = 0.42;
     let s = 0.01;
 
-    let mut model = try!(env.new_model(&format!("mip_{}", t)));
+    let mut model = MIPModel(try!(env.new_model(&format!("mip_{}", t))));
 
-    let u = try!(add_var_series(&mut model, "u", horizon, 0));
-    let x = try!(add_var_series(&mut model, "x", horizon + 2, -1));
+    let u = try!(model.add_var_series("u", horizon, 0));
+    let x = try!(model.add_var_series("x", horizon + 2, -1));
     try!(model.update());
 
     // u_k \in [-1.0, 1.0]
