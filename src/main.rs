@@ -30,6 +30,27 @@ impl From<&'static str> for Error {
 }
 
 
+trait IntoOk<T, E> {
+  fn into_ok<U: From<T>>(self) -> std::result::Result<U, E>;
+}
+
+impl<T, E> IntoOk<T, E> for std::result::Result<T, E> {
+  fn into_ok<U: From<T>>(self) -> std::result::Result<U, E> {
+    self.map(|e| e.into())
+  }
+}
+
+trait IntoErr<T, E> {
+  fn into_err<Err: From<E>>(self) -> std::result::Result<T, Err>;
+}
+
+impl<T, E> IntoErr<T, E> for std::result::Result<T, E> {
+  fn into_err<Err: From<E>>(self) -> std::result::Result<T, Err> {
+    self.map_err(|e| e.into())
+  }
+}
+
+
 fn make_matrix_variable(model: &mut Model,
                         rows: usize,
                         cols: usize,
@@ -50,7 +71,7 @@ fn get_solution_matrix(model: &Model, rows: usize, cols: usize) -> Result<Matrix
     let x = try!(v.get(&model, attr::X));
     sol.push(x);
   }
-  Array::from_shape_vec((rows, cols), sol).map_err(|e|e.into())
+  Array::from_shape_vec((rows, cols), sol).into_err()
 }
 
 
