@@ -61,8 +61,7 @@ fn make_matrix_variable(model: &mut Model,
     let var = try!(model.add_var(&format!("{}_{{{},{}}}", name, r, c), Binary));
     vars.push(var);
   }
-  let vars = try!(Array::from_shape_vec((rows, cols), vars));
-  Ok(vars)
+  Array::from_shape_vec((rows, cols), vars).into_err()
 }
 
 fn get_solution_matrix(model: &Model, rows: usize, cols: usize) -> Result<Matrix<f64>> {
