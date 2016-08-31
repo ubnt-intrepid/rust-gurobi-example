@@ -84,12 +84,13 @@ fn main() {
   println!("");
   for i in 0..n {
     for j in 0..n {
-      for v in 0..n {
-        let x = vars[(i, j, v)].get(&model, attr::X).unwrap();
-        if x > 0.5 {
-          print!("{}", v + 1);
-        }
-      }
+      let x: usize = vars.axis_iter(Axis(2))
+        .map(|v| v[(i, j)].clone())
+        .map(|v| v.get(&model, attr::X).unwrap() as usize)
+        .enumerate()
+        .map(|(i, x)| (i + 1) * x)
+        .sum();
+      print!("{}", x);
     }
     println!("");
   }
