@@ -7,18 +7,22 @@ extern crate itertools;
 use gurobi::*;
 use itertools::*;
 
-struct MIPModel(gurobi::Model);
+struct MPCModel(gurobi::Model);
 
-impl std::ops::Deref for MIPModel {
+impl std::ops::Deref for MPCModel {
   type Target = gurobi::Model;
   fn deref(&self) -> &gurobi::Model { &self.0 }
 }
 
-impl std::ops::DerefMut for MIPModel {
+impl std::ops::DerefMut for MPCModel {
   fn deref_mut(&mut self) -> &mut gurobi::Model { &mut self.0 }
 }
 
-impl MIPModel {
+impl MPCModel {
+  fn new(env: &Env, name: &str) -> Result<MPCModel> {
+      env.new_model(name).map(|model| MPCModel(model))
+  }
+
   fn add_var_series(&mut self, name: &str, len: usize, start: isize) -> Result<Vec<Var>> {
     let mut vars = Vec::with_capacity(len);
     for i in start..((len as isize) - start) {
@@ -42,7 +46,7 @@ fn main() {
     x: Vec<f64>,
   }
 
-  let solve_mip = |x_t: f64, t: usize| -> Result<Solution> {
+  let solve_mpc = |x_t: f64, t: usize| -> Result<Solution> {
     // control horizon.
     let horizon = 10;
     // stage/terminal cost
@@ -50,7 +54,7 @@ fn main() {
     let r = 0.42;
     let s = 0.01;
 
-    let mut model = MIPModel(try!(env.new_model(&format!("mip_{}", t))));
+    let mut model = try!(MPCModel::new(&env, &format!("mpc_{}", t)));
 
     let u = try!(model.add_var_series("u", horizon, 0));
     let x = try!(model.add_var_series("x", horizon + 2, -1));
@@ -128,7 +132,7 @@ fn main() {
 
     if t % n_rt == 0 {
       // update MPC input.
-      let sol = solve_mip(x_t, t).unwrap();
+      let sol = solve_mpc(x_t, t).unwrap();
       let u = match sol.status {
         Status::Optimal => *sol.u.get(0).unwrap(),
         _ => {
