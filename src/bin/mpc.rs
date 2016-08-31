@@ -11,16 +11,20 @@ struct MPCModel(gurobi::Model);
 
 impl std::ops::Deref for MPCModel {
   type Target = gurobi::Model;
-  fn deref(&self) -> &gurobi::Model { &self.0 }
+  fn deref(&self) -> &gurobi::Model {
+    &self.0
+  }
 }
 
 impl std::ops::DerefMut for MPCModel {
-  fn deref_mut(&mut self) -> &mut gurobi::Model { &mut self.0 }
+  fn deref_mut(&mut self) -> &mut gurobi::Model {
+    &mut self.0
+  }
 }
 
 impl MPCModel {
   fn new(env: &Env, name: &str) -> Result<MPCModel> {
-      env.new_model(name).map(|model| MPCModel(model))
+    env.new_model(name).map(|model| MPCModel(model))
   }
 
   fn add_var_series(&mut self, name: &str, len: usize, start: isize) -> Result<Vec<Var>> {
@@ -145,10 +149,10 @@ fn main() {
     let u_t = input.last().cloned().unwrap();
 
     // update the value of actual state.
-    let x_t = 0.99*x_t + u_t + 0.01;
+    let x_t = 0.99 * x_t + u_t + 0.01;
     state.push(x_t);
   }
 
   println!("input = {:?}", input);
-//  println!("state = {:?}", state);
+  //  println!("state = {:?}", state);
 }
