@@ -23,13 +23,13 @@ fn main() {
     .collect();
 
   let env = Env::new("sudoku.log").unwrap();
-  let mut model = env.new_model("sudoku").unwrap();
+  let mut model = Model::new("sudoku", &env).unwrap();
 
   // Create 3-dimensional array of variables.
   let mut vars = Vec::with_capacity(n * n * n);
   for (i, j, v) in iproduct!((0..n), (0..n), (0..n)) {
     let vname = format!("G_{}_{}_{}", i, j, v);
-    let v = model.add_var(&vname, Binary).unwrap();
+    let v = model.add_var(&vname, Binary, 0.0, 0.0, 1.0, &[], &[]).unwrap();
     vars.push(v);
   }
   let vars = Array::from_shape_vec((n, n, n), vars).unwrap();

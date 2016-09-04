@@ -23,14 +23,20 @@ impl std::ops::DerefMut for MPCModel {
 }
 
 impl MPCModel {
-  fn new(env: &Env, name: &str) -> Result<MPCModel> {
-    env.new_model(name).map(|model| MPCModel(model))
+  fn new(modelname: &str, env: &Env) -> Result<MPCModel> {
+    Model::new(modelname, &env).map(|model| MPCModel(model))
   }
 
   fn add_var_series(&mut self, name: &str, len: usize, start: isize) -> Result<Vec<Var>> {
     let mut vars = Vec::with_capacity(len);
     for i in start..((len as isize) - start) {
-      let v = try!(self.add_var(&format!("{}_{}", name, i), Continuous(-INFINITY, INFINITY)));
+      let v = try!(self.add_var(&format!("{}_{}", name, i),
+                                Continuous,
+                                0.0,
+                                -INFINITY,
+                                INFINITY,
+                                &[],
+                                &[]));
       vars.push(v);
     }
     Ok(vars)
@@ -58,7 +64,7 @@ fn main() {
     let r = 0.42;
     let s = 0.01;
 
-    let mut model = try!(MPCModel::new(&env, &format!("mpc_{}", t)));
+    let mut model = try!(MPCModel::new(&format!("mpc_{}", t), &env));
 
     let u = try!(model.add_var_series("u", horizon, 0));
     let x = try!(model.add_var_series("x", horizon + 2, -1));
